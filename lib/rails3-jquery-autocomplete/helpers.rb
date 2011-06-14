@@ -116,19 +116,19 @@ module Rails3JQueryAutocomplete
 
       implementation == :mongo_mapper ? (items = model.query) : items = model.scoped
 
-      scopes.each { |scope| items = items.send(scope) } unless scopes.empty?
+      scopes.each { |scope| items = items.send(scope, term) } unless scopes.empty?
 
       case implementation
         when :mongoid
           search = (is_full_search ? '.*' : '^') + term + '.*'
-          items  = model.where(method.to_sym => /#{search}/i).limit(limit).order_by(order)
+          items  = (options[:scopes_only] ? items :  model.where(method.to_sym => /#{search}/i)).limit(limit).order_by(order)
         when :mongo_mapper
           search = (is_full_search ? '.*' : '^') + term + '.*'
-          items  = model.where(method.to_sym => /#{search}/i).limit(limit).sort(order)  
+          items  = (options[:scopes_only] ? items : model.where(method.to_sym => /#{search}/i)).limit(limit).sort(order)  
         when :activerecord
           table_name = model.table_name
           items = items.select(["#{table_name}.#{model.primary_key}", "#{table_name}.#{method}"] + (options[:extra_data].blank? ? [] : options[:extra_data])) unless options[:full_model]
-          items = items.where(["LOWER(#{table_name}.#{method}) #{like_clause} ?", "#{(is_full_search ? '%' : '')}#{term.downcase}%"]) \
+          items = (options[:scopes_only] ? items : items.where(["LOWER(#{table_name}.#{method}) #{like_clause} ?", "#{(is_full_search ? '%' : '')}#{term.downcase}%"])) \
               .limit(limit).order(order)
       end
     end
